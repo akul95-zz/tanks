@@ -286,8 +286,10 @@ void join_room(int self)
 	}
 	else
 	{
-		// TODO: take input for IP
-		strcpy(IP, "127.0.0.1");
+		printf("Enter host IP: ");
+		system("stty echo");
+		scanf("%s", IP);
+		system("stty -echo");
 	}
 	int fd = setup_client_socket(IP);
 	play_game(fd);
@@ -301,6 +303,10 @@ void* join_self_room(void *args)
 void host_room()
 {
 	// start room
+	char start_room_symbol = START_GAME;
+	char close_room_symbol = CLOSE_ROOM;
+	printf("Press %c to start the game\n", start_room_symbol);
+	printf("Press %c to close the game\n", close_room_symbol);
 	clientData client_list[MAXCONN];
 	int num_clients = 0;
 	
@@ -403,10 +409,16 @@ void run_game()
 	print_opening_screen();
 	while(1)
 	{
-		char *inp_ptr = get_input();
-		if(inp_ptr == NULL)
-			continue;
-		char inp = *inp_ptr;
+		char opt1 = HOST_ROOM;
+		char opt2 = JOIN_ROOM;
+		char opt3 = EXIT_GAME;
+		printf("Press %c to host room\n", opt1);
+		printf("Press %c to join room\n", opt2);
+		printf("Press %c to exit game\n", opt3);
+		char inp;
+		system("stty echo");
+		scanf(" %c", &inp);
+		system("stty -echo");
 		if(inp == HOST_ROOM)
 			host_room();
 		if(inp == JOIN_ROOM)
@@ -415,6 +427,7 @@ void run_game()
 			break;
 		if(inp == ESCAPE)
 			break;
+		system("stty echo");
 	}
 	system("stty echo");
 }
