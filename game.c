@@ -2,6 +2,15 @@
 #include "gameDef.h"
 #include "game_network.h"
 
+int MIN(int a, int b)
+{
+	return ((a < b)?a:b);
+}
+
+int MAX(int a, int b)
+{
+	return ((a > b)?a:b);
+}
 void add_horizontal_wall(int arena[][ARENA_WIDTH], int x1, int x2, int y)
 {
 	int i;
@@ -336,7 +345,9 @@ void upd_state(gameState *curr_state)
 			curr_state->bullets[i] = NULL;
 			bullet_exists = 0;
 		}
-		for (j = prev_r; j <= r && bullet_exists; ++j)
+		int min_r = MIN(prev_r, r), max_r = MAX(prev_r, r);
+		int min_c = MIN(prev_c, c), max_c = MAX(prev_c, c);
+		for (j = min_r; j <= max_r && bullet_exists; ++j)
 		{
 			if(curr_state->arena[j][prev_c] == NONBREAKABLE_WALL)
 			{
@@ -347,7 +358,7 @@ void upd_state(gameState *curr_state)
 		}
 		if(!bullet_exists)
 			continue;
-		for (j = prev_c; j <= c && bullet_exists; ++j)
+		for (j = min_c; j <= max_c && bullet_exists; ++j)
 		{
 			if(curr_state->arena[prev_r][j] == NONBREAKABLE_WALL)
 			{
