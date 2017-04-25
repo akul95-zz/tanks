@@ -12,6 +12,16 @@ void unpack_tank(tank *T, char buffer[])
 	sscanf(buffer, "%d %d %d %d %d", &T->id, &T->row, &T->col, &T->dir, &T->hp);
 }
 
+bullet *get_new_bullet(int bullet_id, tank *T)
+{
+	bullet *ret = (bullet *)malloc(sizeof(bullet));
+	ret->id = bullet_id;
+	ret->row = T->row;
+	ret->col = T->col;
+	ret->dir = T->dir;
+	return ret;
+}
+
 tank *get_new_tank(int id)
 {
 	tank *ret = (tank *)malloc(sizeof(tank));
@@ -64,10 +74,6 @@ tank *get_new_tank(int id)
 int apply_key_press_to_tank(tank *T, char k)
 {
 	int ret = 0;
-	if('A' <= k && k <= 'Z')
-	{
-		k+=('a' - 'A');
-	}
 	if(k == 'w')
 	{
 		if(T->dir == 0)
@@ -187,6 +193,77 @@ void load_arena(gameState *curr_state, int level, int num_tanks, tank **tank_inf
 	}
 }
 
+void fire_bullet(gameState *curr_state, int id)
+{
+	bullet *new_bullet = get_new_bullet(0,curr_state->tanks[id]);
+	curr_state->num_bullets++;
+	curr_state->bullets = (bullet **)realloc(curr_state->bullets, curr_state->num_bullets*sizeof(bullet*));
+	curr_state->bullets[curr_state->num_bullets - 1] = new_bullet;
+}
+
+void upd_state(gameState *curr_state)
+{
+	int i,j;
+	for (i = 0; i < curr_state->num_bullets; ++i)
+	{
+		switch(curr_state->bullets[i]->dir)
+		{
+			case 0: curr_state->bullets[i]->row = curr_state->bullets[i]->row - 2;
+				break;
+			case 1: curr_state->bullets[i]->col = curr_state->bullets[i]->col + 2;
+				break;
+			case 2: curr_state->bullets[i]->row = curr_state->bullets[i]->row + 2;
+				break;
+			case 3: curr_state->bullets[i]->col = curr_state->bullets[i]->col - 2;
+				break;	
+		}
+		int r = curr_state->bullets[i]->row;
+		int c = curr_state->bullets[i]->col;
+		int bullet_exists = 1;
+		if(r < 0 || c < 0 || r >= ARENA_HEIGHT || c >= ARENA_WIDTH)
+		{
+			free(curr_state->bullets[i]);
+			curr_state->bullets[i] = NULL;
+			bullet_exists = 0;
+		}
+		if(!bullet_exists)
+			continue;
+		for (j = 0; j < curr_state->num_tanks && bullet_exists; ++j)
+		{
+			if(curr_state->tanks[j]->hp <= 0)
+				continue;
+			int rdiff = abs(curr_state->tanks[j]->row - r);
+			int cdiff = abs(curr_state->tanks[j]->col - c);
+			if(rdiff < 2 && cdiff < 2)
+			{
+				free(curr_state->bullets[i]);
+				curr_state->bullets[i] = NULL;
+				curr_state->tanks[j]->hp = curr_state->tanks[j]->hp - BULLET_DAMAGE;
+				bullet_exists = 0;
+			}
+		}
+	}
+	int ctr = 0;
+	for (i = 0; i < curr_state->num_bullets; ++i)
+	{
+		if(curr_state->bullets[i] != NULL)
+			ctr++;
+	}
+	bullet **new_bullets = (bullet **)calloc(ctr, sizeof(bullet*));
+	int cpos = 0;
+	for (i = 0; i < curr_state->num_bullets; ++i)
+	{
+		if(curr_state->bullets[i] != NULL)
+		{
+			new_bullets[cpos] = curr_state->bullets[i];
+			cpos++;
+		}
+	}
+	free(curr_state->bullets);
+	curr_state->bullets = new_bullets;
+	curr_state->num_bullets = ctr;
+}
+
 void play_game(int fd)
 {
 	fd_set serverFD;
@@ -242,7 +319,8 @@ void play_game(int fd)
 			if(inp_ptr != NULL)
 			{
 				char inp = *inp_ptr;
-				sprintf(buffer, "%d %c", my_id, inp);
+				inp = tolower(inp);
+				sprintf(buffer, "%d%c", my_id, inp);
 				send(fd, buffer, BUFF_SIZE, 0);
 				if(inp == ESCAPE)
 					return;
@@ -258,15 +336,23 @@ void play_game(int fd)
 			}
 			else if(!strcmp(buffer, "UPD_PLISS"))
 			{
+				upd_state(&curr_state);
 				print_arena(curr_state);
-				printf("%d\n", my_id);
+				// printf("%d\n", my_id);
 			}
 			else
 			{
 				int tank_id;
 				char key_press;
-				sscanf(buffer, "%d %c", &tank_id, &key_press);
-				move_tank(&curr_state, tank_id, key_press);
+				sscanf(buffer, "%d%c", &tank_id, &key_press);
+				if(key_press == FIRE_BULLET)
+				{
+					fire_bullet(&curr_state, tank_id);
+				}
+				else
+				{
+					move_tank(&curr_state, tank_id, key_press);
+				}
 			}
 		}
 	}
@@ -369,6 +455,10 @@ void host_room()
 		pack_tank(temp_tank, buffer);
 		send_to_fdset(client_fds, max_fd, buffer);
 	}
+	int received_movement[num_clients];
+	int received_fire[num_clients];
+	memset(received_movement, 0, sizeof(received_movement));
+	memset(received_fire, 0, sizeof(received_fire));
 	while(1)
 	{
 		clock_t curr_time = clock();
@@ -378,6 +468,8 @@ void host_room()
 			strcpy(buffer, "UPD_PLISS");
 			send_to_fdset(client_fds, max_fd, buffer);
 			start_time = clock();
+			memset(received_movement, 0, sizeof(received_movement));
+			memset(received_fire, 0, sizeof(received_fire));
 		}
 		int ret_val = listen_on_fdset(client_fds, max_fd, buffer);
 		if(ret_val < 0)
@@ -392,11 +484,16 @@ void host_room()
 		{
 			int from_id;
 			char key_press;
-			sscanf(buffer, "%d %c", &from_id, &key_press);
-			// printf("%s\n", buffer);
-			if(move_tank(&curr_state, from_id, key_press))
+			sscanf(buffer, "%d%c", &from_id, &key_press);
+			if(!received_fire[from_id] && key_press == FIRE_BULLET)
 			{
-				// printf("approved %s\n", buffer);
+				fire_bullet(&curr_state, from_id);
+				received_fire[from_id] = 1;
+				send_to_fdset(client_fds, max_fd, buffer);
+			}
+			if(!received_movement[from_id] && move_tank(&curr_state, from_id, key_press))
+			{
+				received_movement[from_id] = 1;
 				send_to_fdset(client_fds, max_fd, buffer);
 			}
 		}

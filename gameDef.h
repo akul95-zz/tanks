@@ -13,6 +13,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <math.h>
+#include <ctype.h>
 
 
 #define PORT "4003"
@@ -37,8 +38,13 @@
 #define BLANK_SPACE 0
 #define NONBREAKABLE_WALL 1
 
+#define FIRE_BULLET ' '
+
 #define TANK_COLOUR "\x1b[31m"
+#define BULLET_COLOUR "\x1b[32m"
 #define RESET_COLOUR "\x1b[0m"
+
+#define BULLET_DAMAGE 50
 
 typedef struct clientData
 {

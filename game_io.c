@@ -73,6 +73,11 @@ void put_tank_arena(int id, int row, int col, int dir, int hp, int arena[][ARENA
 	return;
 }
 
+void put_bullet_arena(int id, int row, int col, int arena[][ARENA_WIDTH])
+{
+	arena[row][col] = 200 + id;
+}
+
 void print_arena(gameState curr_state)
 {
 	int i, j;
@@ -85,6 +90,13 @@ void print_arena(gameState curr_state)
 		int dir = curr_state.tanks[i]->dir;
 		int hp = curr_state.tanks[i]->hp;
 		put_tank_arena(id, r, c, dir, hp, curr_state.arena);
+	}
+	for (i = 0; i < curr_state.num_bullets; ++i)
+	{
+		int id = curr_state.bullets[i]->id;
+		int r = curr_state.bullets[i]->row;
+		int c = curr_state.bullets[i]->col;
+		put_bullet_arena(id, r, c, curr_state.arena);
 	}
 	for (i = 0; i < ARENA_HEIGHT; ++i)
 	{
@@ -112,6 +124,11 @@ void print_arena(gameState curr_state)
 				solid_block[3] = (char)0;
 				int id = curr_state.arena[i][j] - 100;
 				printf(TANK_COLOUR"%s"RESET_COLOUR, solid_block);
+			}
+			else if(curr_state.arena[i][j] >= 200 && curr_state.arena[i][j] < 300)
+			{
+				char bullet_block = '*';
+				printf(BULLET_COLOUR"%c"RESET_COLOUR, bullet_block);
 			}
 		}
 		printf("\n");

@@ -1,0 +1,3 @@
+tanks have different colors
+scores on right panes
+arrow keys fml

@@ -9,6 +9,6 @@ void listen_on_socket(int, clientData[], int*);
 
 int listen_on_fdset(fd_set, int, char []);
 
-void sent_to_fdset(fd_set, int, char []);
+void send_to_fdset(fd_set, int, char []);
 
 #endif
