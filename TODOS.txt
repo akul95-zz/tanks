@@ -1,3 +1,4 @@
 tanks have different colors
 scores on right panes
 arrow keys fml
+1 quit = all quit. why???

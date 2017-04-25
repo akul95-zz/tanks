@@ -11,6 +11,7 @@ int MAX(int a, int b)
 {
 	return ((a > b)?a:b);
 }
+
 void add_horizontal_wall(int arena[][ARENA_WIDTH], int x1, int x2, int y)
 {
 	int i;
@@ -418,6 +419,7 @@ void play_game(int fd)
 	char buffer[BUFF_SIZE];
 	gameState curr_state;
 	int my_id;
+	// game arena etc.
 	while(1)
 	{
 		int ret_val;

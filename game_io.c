@@ -132,6 +132,12 @@ void print_arena(gameState curr_state)
 		}
 		printf("\n");
 	}
+	printf("Controls:\n");
+	printf("W: up\n");
+	printf("A: left\n");
+	printf("S: down\n");
+	printf("D: right\n");
+	printf("space: fire\n");
 	// for (i = 0; i < ARENA_HEIGHT; ++i)
 	// {
 	// 	for (j = 0; j < ARENA_WIDTH; ++j)
