@@ -2,6 +2,106 @@
 #include "gameDef.h"
 #include "game_network.h"
 
+void add_horizontal_wall(int arena[][ARENA_WIDTH], int x1, int x2, int y)
+{
+	int i;
+	for(i = x1; i <= x2; i++)
+	{
+		arena[y][i] = NONBREAKABLE_WALL;
+	}
+}
+
+void add_vertical_wall(int arena[][ARENA_WIDTH], int y1, int y2, int x)
+{
+	int i;
+	for(i = y1; i <= y2; i++)
+	{
+		arena[i][x] = NONBREAKABLE_WALL;
+	}
+}
+
+void make_arena_1(int arena[][ARENA_WIDTH])
+{
+	int i, j;
+	for(i = 0; i < ARENA_HEIGHT; i++)
+	{
+		for(j = 0; j < ARENA_WIDTH; j++)
+		{
+			arena[i][j] = BLANK_SPACE;
+			if(i == 0 || i == ARENA_HEIGHT - 1 || j == 0 || j == ARENA_WIDTH - 1)
+			{
+				arena[i][j] = NONBREAKABLE_WALL;
+			}
+		}
+	}
+}
+
+void make_arena_2(int arena[][ARENA_WIDTH])
+{
+	int i, j;
+	for(i = 0; i < ARENA_HEIGHT; i++)
+	{
+		for(j = 0; j < ARENA_WIDTH; j++)
+		{
+			arena[i][j] = BLANK_SPACE;
+			if(i == 0 || i == ARENA_HEIGHT - 1 || j == 0 || j == ARENA_WIDTH - 1)
+			{
+				arena[i][j] = NONBREAKABLE_WALL;
+			}
+		}
+	}
+	add_horizontal_wall(arena, 10, 110, 16);
+	add_vertical_wall(arena, 7, 28, 60);
+	add_horizontal_wall(arena, 1, 12, 7 );
+	add_horizontal_wall(arena, 108, 119, 7 );
+	add_horizontal_wall(arena, 1, 12, 26 );
+	add_horizontal_wall(arena, 108, 119, 26 );
+	add_vertical_wall(arena, 1, 7, 35 );
+	add_vertical_wall(arena, 28, 34, 35 );
+	add_vertical_wall(arena, 1, 7, 85 );
+	add_vertical_wall(arena, 28, 34, 85 );
+}
+
+void make_arena_3(int arena[][ARENA_WIDTH])
+{
+	int i, j;
+	for(i = 0; i < ARENA_HEIGHT; i++)
+	{
+		for(j = 0; j < ARENA_WIDTH; j++)
+		{
+			arena[i][j] = BLANK_SPACE;
+			if(i == 0 || i == ARENA_HEIGHT - 1 || j == 0 || j == ARENA_WIDTH - 1)
+			{
+				arena[i][j] = NONBREAKABLE_WALL;
+			}
+		}
+	}
+	add_horizontal_wall(arena, 1, 8, 17);
+	add_horizontal_wall(arena, 112, 119, 17);
+	add_vertical_wall(arena, 1, 7, 45);
+	add_vertical_wall(arena, 1, 7, 75);
+	add_vertical_wall(arena, 28, 34, 45);
+	add_vertical_wall(arena, 28, 34, 75);
+	add_vertical_wall(arena, 13, 21, 55);
+	add_vertical_wall(arena, 13, 21, 65);
+	add_horizontal_wall(arena, 55, 65, 13);
+	add_horizontal_wall(arena, 55, 65, 21);
+
+	add_vertical_wall(arena, 8, 12, 20);
+	add_vertical_wall(arena, 8, 12, 30);
+	add_vertical_wall(arena, 8, 12, 100);
+	add_vertical_wall(arena, 8, 12, 90);
+	add_horizontal_wall(arena, 20, 30, 12);
+	add_horizontal_wall(arena, 90, 100, 12);
+
+	add_vertical_wall(arena, 24, 28, 20);
+	add_vertical_wall(arena, 24, 28, 30);
+	add_vertical_wall(arena, 24, 28, 100);
+	add_vertical_wall(arena, 24, 28, 90);
+	add_horizontal_wall(arena, 20, 30, 24);
+	add_horizontal_wall(arena, 90, 100, 24);
+}
+
 void pack_tank(tank *T, char buffer[])
 {
 	sprintf(buffer, "%d %d %d %d %d", T->id, T->row, T->col, T->dir, T->hp);
@@ -19,6 +119,14 @@ bullet *get_new_bullet(int bullet_id, tank *T)
 	ret->row = T->row;
 	ret->col = T->col;
 	ret->dir = T->dir;
+	if(ret->dir == 0)
+		ret->row = ret->row - 1;
+	if(ret->dir == 1)
+		ret->col = ret->col + 1;
+	if(ret->dir == 2)
+		ret->row = ret->row + 1;
+	if(ret->dir == 3)
+		ret->col = ret->col - 1;
 	return ret;
 }
 
@@ -73,6 +181,8 @@ tank *get_new_tank(int id)
 
 int apply_key_press_to_tank(tank *T, char k)
 {
+	if(T == NULL)
+		return 0;
 	int ret = 0;
 	if(k == 'w')
 	{
@@ -130,7 +240,7 @@ int move_tank(gameState *curr_state, int id, char key_press)
 {
 	int i, j;
 	// no point moving em if they are dead
-	if(curr_state->tanks[id]->hp <= 0)
+	if(curr_state->tanks[id] == NULL)
 		return 0;
 	tank *new_tank = (tank *)malloc(sizeof(tank));
 	new_tank->id = curr_state->tanks[id]->id;
@@ -142,6 +252,8 @@ int move_tank(gameState *curr_state, int id, char key_press)
 	for (i = 0; i < curr_state->num_tanks; ++i)
 	{
 		if(i == id)
+			continue;
+		if(curr_state->tanks[i] == NULL)
 			continue;
 		int rdiff = abs(new_tank->row - curr_state->tanks[i]->row);
 		int cdiff = abs(new_tank->col - curr_state->tanks[i]->col);
@@ -175,26 +287,22 @@ void load_arena(gameState *curr_state, int level, int num_tanks, tank **tank_inf
 	curr_state->bullets = (bullet **)calloc(0, sizeof(bullet*));
 	if(level == 1)
 	{
-		int i,j;
-		for (i = 0; i < ARENA_HEIGHT; ++i)
-		{
-			for (j = 0; j < ARENA_WIDTH; ++j)
-			{
-				if(i == 0 || i == ARENA_HEIGHT - 1 || j == 0 || j == ARENA_WIDTH - 1)
-				{
-					curr_state->arena[i][j] = NONBREAKABLE_WALL;
-				}
-				else
-				{
-					curr_state->arena[i][j] = BLANK_SPACE;
-				}
-			}
-		}
+		make_arena_1(curr_state->arena);
+	}
+	else if(level == 2)
+	{
+		make_arena_2(curr_state->arena);
+	}
+	else if(level == 3)
+	{
+		make_arena_3(curr_state->arena);
 	}
 }
 
 void fire_bullet(gameState *curr_state, int id)
 {
+	if(curr_state->tanks[id] == NULL)
+		return;
 	bullet *new_bullet = get_new_bullet(0,curr_state->tanks[id]);
 	curr_state->num_bullets++;
 	curr_state->bullets = (bullet **)realloc(curr_state->bullets, curr_state->num_bullets*sizeof(bullet*));
@@ -206,6 +314,8 @@ void upd_state(gameState *curr_state)
 	int i,j;
 	for (i = 0; i < curr_state->num_bullets; ++i)
 	{
+		int prev_r = curr_state->bullets[i]->row;
+		int prev_c = curr_state->bullets[i]->col;
 		switch(curr_state->bullets[i]->dir)
 		{
 			case 0: curr_state->bullets[i]->row = curr_state->bullets[i]->row - 2;
@@ -226,11 +336,31 @@ void upd_state(gameState *curr_state)
 			curr_state->bullets[i] = NULL;
 			bullet_exists = 0;
 		}
+		for (j = prev_r; j <= r && bullet_exists; ++j)
+		{
+			if(curr_state->arena[j][prev_c] == NONBREAKABLE_WALL)
+			{
+				free(curr_state->bullets[i]);
+				curr_state->bullets[i] = NULL;
+				bullet_exists = 0;
+			}
+		}
+		if(!bullet_exists)
+			continue;
+		for (j = prev_c; j <= c && bullet_exists; ++j)
+		{
+			if(curr_state->arena[prev_r][j] == NONBREAKABLE_WALL)
+			{
+				free(curr_state->bullets[i]);
+				curr_state->bullets[i] = NULL;
+				bullet_exists = 0;
+			}
+		}
 		if(!bullet_exists)
 			continue;
 		for (j = 0; j < curr_state->num_tanks && bullet_exists; ++j)
 		{
-			if(curr_state->tanks[j]->hp <= 0)
+			if(curr_state->tanks[j] == NULL)
 				continue;
 			int rdiff = abs(curr_state->tanks[j]->row - r);
 			int cdiff = abs(curr_state->tanks[j]->col - c);
@@ -239,6 +369,11 @@ void upd_state(gameState *curr_state)
 				free(curr_state->bullets[i]);
 				curr_state->bullets[i] = NULL;
 				curr_state->tanks[j]->hp = curr_state->tanks[j]->hp - BULLET_DAMAGE;
+				if(curr_state->tanks[j]->hp <= 0)
+				{
+					free(curr_state->tanks[j]);
+					curr_state->tanks[j] = NULL;
+				}
 				bullet_exists = 0;
 			}
 		}
@@ -389,6 +524,18 @@ void* join_self_room(void *args)
 void host_room()
 {
 	// start room
+	int level;
+	system("stty echo");
+	printf("Enter level (1-3)\n");
+	scanf("%d", &level);
+	while(level < 1 || level > 3)
+	{
+		printf("Invalid level\n");
+		printf("Enter level (1-3)\n");
+		scanf("%d", &level);
+	}
+	system("stty -echo");
+
 	char start_room_symbol = START_GAME;
 	char close_room_symbol = CLOSE_ROOM;
 	printf("Press %c to start the game\n", start_room_symbol);
@@ -432,7 +579,6 @@ void host_room()
 	clock_t start_time = clock(), curr_time = clock();
 	char buffer[BUFF_SIZE];
 	// TODO: take arena number input
-	int level = 1;
 	// level num_players
 	// tank_info 1
 	// ...

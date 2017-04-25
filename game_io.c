@@ -29,10 +29,8 @@ int kbhit(void)
 	return FD_ISSET(STDIN_FILENO, &rdfs);
 }
 
-void put_tank_arena(int id, int row, int col, int dir, int hp, int arena[][ARENA_WIDTH])
+void put_tank_arena(int id, int row, int col, int dir, int arena[][ARENA_WIDTH])
 {
-	if(hp <= 0)
-		return;
 	if(dir == 0) // up
 	{
 		arena[row - 1][col] = 100 + id;
@@ -84,12 +82,13 @@ void print_arena(gameState curr_state)
 	system("clear");
 	for (i = 0; i < curr_state.num_tanks; ++i)
 	{
+		if(curr_state.tanks[i] == NULL)
+			continue;
 		int id = curr_state.tanks[i]->id;
 		int r = curr_state.tanks[i]->row;
 		int c = curr_state.tanks[i]->col;
 		int dir = curr_state.tanks[i]->dir;
-		int hp = curr_state.tanks[i]->hp;
-		put_tank_arena(id, r, c, dir, hp, curr_state.arena);
+		put_tank_arena(id, r, c, dir, curr_state.arena);
 	}
 	for (i = 0; i < curr_state.num_bullets; ++i)
 	{
