@@ -250,6 +250,7 @@ int move_tank(gameState *curr_state, int id, char key_press)
 	// no point moving em if they are dead
 	if(curr_state->tanks[id] == NULL)
 		return 0;
+
 	tank *new_tank = (tank *)malloc(sizeof(tank));
 	new_tank->id = curr_state->tanks[id]->id;
 	new_tank->row = curr_state->tanks[id]->row;
@@ -456,6 +457,9 @@ void play_game(int fd)
 		else if(!strcmp(buffer, "ARENA INFO"))
 		{
 			// level num_players
+			// player nick 1
+			// ...
+			// player nick n
 			// tank_info 1
 			// ...
 			// tank_info n
@@ -467,8 +471,18 @@ void play_game(int fd)
 			int level, num_tanks;
 			tank **tank_info;
 			sscanf(buffer, "%d %d %d", &my_id, &level, &num_tanks);
-			tank_info = (tank **)calloc(num_tanks, sizeof(tank*));
+			curr_state.nicks = (char **)calloc(num_tanks, sizeof(char*));
 			int i;
+			for (i = 0; i < num_tanks; ++i)
+			{
+				curr_state.nicks[i] = (char *)calloc(BUFF_SIZE, sizeof(char));
+				while((ret_val = listen_on_fdset(serverFD, fd, curr_state.nicks[i])) == 0);
+				if(ret_val < 0)
+				{
+					// error
+				}
+			}
+			tank_info = (tank **)calloc(num_tanks, sizeof(tank*));
 			for (i = 0; i < num_tanks; ++i)
 			{
 				while((ret_val = listen_on_fdset(serverFD, fd, buffer)) == 0);
@@ -493,7 +507,7 @@ void play_game(int fd)
 			{
 				char inp = *inp_ptr;
 				inp = tolower(inp);
-				sprintf(buffer, "%d%c", my_id, inp);
+				sprintf(buffer, "%d %c", my_id, inp);
 				send(fd, buffer, BUFF_SIZE, 0);
 				if(inp == ESCAPE)
 					return;
@@ -516,8 +530,9 @@ void play_game(int fd)
 			else
 			{
 				int tank_id;
-				char key_press;
-				sscanf(buffer, "%d%c", &tank_id, &key_press);
+				int sscanf_len;
+				sscanf(buffer, "%d%n", &tank_id, &sscanf_len);
+				char key_press = buffer[sscanf_len + 1];
 				if(key_press == FIRE_BULLET)
 				{
 					fire_bullet(&curr_state, tank_id);
@@ -642,6 +657,9 @@ void host_room()
 	char buffer[BUFF_SIZE];
 	// TODO: take arena number input
 	// level num_players
+	// player nick 1
+	// ...
+	// player nick n
 	// tank_info 1
 	// ...
 	// tank_info n
@@ -655,6 +673,14 @@ void host_room()
 		send(client_list[i].fd, buffer, BUFF_SIZE, 0);
 	}
 	curr_state.num_tanks = num_clients;
+	curr_state.nicks = (char **)calloc(num_clients, sizeof(char *));
+	for (i = 0; i < num_clients; ++i)
+	{
+		curr_state.nicks[i] = (char *)calloc(BUFF_SIZE, sizeof(char));
+		sprintf(curr_state.nicks[i], "%s", client_list[i].nick);
+		sprintf(buffer, "%s", client_list[i].nick);
+		send_to_fdset(client_fds, max_fd, buffer);
+	}
 	curr_state.tanks = (tank **)calloc(num_clients, sizeof(tank*));
 	for (i = 0; i < num_clients; ++i)
 	{
@@ -692,8 +718,9 @@ void host_room()
 		else
 		{
 			int from_id;
-			char key_press;
-			sscanf(buffer, "%d%c", &from_id, &key_press);
+			int sscanf_len = 0;
+			sscanf(buffer, "%d%n", &from_id, &sscanf_len);
+			char key_press = buffer[sscanf_len + 1];
 			if(!received_fire[from_id] && key_press == FIRE_BULLET)
 			{
 				fire_bullet(&curr_state, from_id);

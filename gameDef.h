@@ -74,6 +74,7 @@ typedef struct gameState
 {
 	int num_tanks;
 	tank **tanks;
+	char **nicks;
 	int num_bullets;
 	bullet **bullets;
 	int arena[ARENA_HEIGHT][ARENA_WIDTH];

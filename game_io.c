@@ -160,6 +160,18 @@ void print_arena(gameState curr_state)
 	// }
 }
 
+int is_ok(char x)
+{
+	if('a' <= x && x <= 'z')
+		return 1;
+	if('A' <= x && x <= 'Z')
+		return 1;
+	if('0' <= x && x <= '9')
+		return 1;
+	if(x == ' ')
+		return 1;
+	return 0;
+}
 char* get_input()
 {
 	char *ret = NULL;
@@ -168,6 +180,11 @@ char* get_input()
 	{
 		ret = (char *)malloc(sizeof(char));
 		*ret = getchar();
+		if(!is_ok(*ret))
+		{
+			free(ret);
+			ret = NULL;
+		}
 	}
 	changemode(0);
 	return ret;
