@@ -1,6 +1,6 @@
 CC = gcc
-DEPS = game_io.h game_network.h game.h
-OBJ =  game_io.o game_network.o game.o driver.o
+DEPS = game_io.h game_security.h game_network.h game.h
+OBJ =  game_io.o game_security.o game_network.o game.o driver.o
 CFLAGS = -pthread
 
 %.o: %.c $(DEPS)

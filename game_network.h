@@ -3,9 +3,9 @@
 
 int setup_listen_socket();
 
-int setup_client_socket();
+int setup_client_socket(char[], char[]);
 
-void listen_on_socket(int, clientData[], int*);
+int listen_on_socket(int, clientData[], int*);
 
 int listen_on_fdset(fd_set, int, char []);
 

@@ -122,22 +122,34 @@ void print_arena(gameState curr_state)
 				solid_block[2] = (char)-120;
 				solid_block[3] = (char)0;
 				int id = curr_state.arena[i][j] - 100;
-				printf(TANK_COLOUR"%s"RESET_COLOUR, solid_block);
+				switch(id)
+				{
+					case 0: printf(COLOUR_0"%s"RESET_COLOUR, solid_block);
+						break;
+					case 1: printf(COLOUR_1"%s"RESET_COLOUR, solid_block);
+						break;
+					case 2: printf(COLOUR_2"%s"RESET_COLOUR, solid_block);
+						break;
+					case 3: printf(COLOUR_3"%s"RESET_COLOUR, solid_block);
+						break;
+					case 4: printf(COLOUR_4"%s"RESET_COLOUR, solid_block);
+						break;
+					case 5: printf(COLOUR_5"%s"RESET_COLOUR, solid_block);
+						break;
+				}
 			}
 			else if(curr_state.arena[i][j] >= 200 && curr_state.arena[i][j] < 300)
 			{
 				char bullet_block = '*';
 				printf(BULLET_COLOUR"%c"RESET_COLOUR, bullet_block);
 			}
+			else
+			{
+				printf(".");
+			}
 		}
 		printf("\n");
 	}
-	printf("Controls:\n");
-	printf("W: up\n");
-	printf("A: left\n");
-	printf("S: down\n");
-	printf("D: right\n");
-	printf("space: fire\n");
 	// for (i = 0; i < ARENA_HEIGHT; ++i)
 	// {
 	// 	for (j = 0; j < ARENA_WIDTH; ++j)

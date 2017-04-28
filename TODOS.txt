@@ -1,4 +1,5 @@
-tanks have different colors
 scores on right panes
 arrow keys fml
 1 quit = all quit. why???
+after client failed to connect stuff messes up
+user authentication

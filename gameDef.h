@@ -16,7 +16,7 @@
 #include <ctype.h>
 
 
-#define PORT "4003"
+#define PORT "1025"
 #define MAXCONN 6
 
 #define ARENA_HEIGHT 35
@@ -40,15 +40,23 @@
 
 #define FIRE_BULLET ' '
 
-#define TANK_COLOUR "\x1b[31m"
-#define BULLET_COLOUR "\x1b[32m"
+#define COLOUR_0 "\x1b[31m"
+#define COLOUR_1 "\x1B[32m"
+#define COLOUR_2 "\x1B[33m"
+#define COLOUR_3 "\x1B[34m"
+#define COLOUR_4 "\x1B[35m"
+#define COLOUR_5 "\x1B[36m"
+#define BULLET_COLOUR "\x1b[37m"
 #define RESET_COLOUR "\x1b[0m"
 
 #define BULLET_DAMAGE 50
 
+#define PUBLIC_KEY 1000000801
+
 typedef struct clientData
 {
 	int fd, id;
+	char nick[BUFF_SIZE];
 }clientData;
 
 

@@ -122,10 +122,10 @@ void unpack_tank(tank *T, char buffer[])
 	sscanf(buffer, "%d %d %d %d %d", &T->id, &T->row, &T->col, &T->dir, &T->hp);
 }
 
-bullet *get_new_bullet(int bullet_id, tank *T)
+bullet *get_new_bullet(tank *T)
 {
 	bullet *ret = (bullet *)malloc(sizeof(bullet));
-	ret->id = bullet_id;
+	ret->id = T->id;
 	ret->row = T->row;
 	ret->col = T->col;
 	ret->dir = T->dir;
@@ -191,8 +191,6 @@ tank *get_new_tank(int id)
 
 int apply_key_press_to_tank(tank *T, char k)
 {
-	if(T == NULL)
-		return 0;
 	int ret = 0;
 	if(k == 'w')
 	{
@@ -259,6 +257,14 @@ int move_tank(gameState *curr_state, int id, char key_press)
 	new_tank->dir = curr_state->tanks[id]->dir;
 	new_tank->hp = curr_state->tanks[id]->hp;
 	int ret = apply_key_press_to_tank(new_tank, key_press);
+	// if(!ret)
+	// {
+	// 	printf("failed %d %c because dunno\n", id, key_press);
+	// }
+	// else
+	// {
+	// 	printf("not failed %d %c because dunno\n", id, key_press);
+	// }
 	for (i = 0; i < curr_state->num_tanks; ++i)
 	{
 		if(i == id)
@@ -268,8 +274,23 @@ int move_tank(gameState *curr_state, int id, char key_press)
 		int rdiff = abs(new_tank->row - curr_state->tanks[i]->row);
 		int cdiff = abs(new_tank->col - curr_state->tanks[i]->col);
 		if(rdiff < 3 && cdiff < 3)
+		{
 			ret = 0;
+			break;
+		}
 	}
+	// if(!ret)
+	// {
+	// 	printf("failed %d %c because of %d\n", id, key_press, i);
+	// 	if(curr_state->tanks[i] != NULL)
+	// 		printf("%d\n", curr_state->tanks[i]->hp);
+	// }
+	// else
+	// {
+	// 	printf("not failed %d %c because of %d\n", id, key_press, i);
+	// 	// if(curr_state->tanks[i] == NULL)
+	// 	// 	printf("bakchodi hain\n");
+	// }
 	for (i = 0; i < ARENA_HEIGHT; ++i)
 	{
 		for (j = 0; j < ARENA_WIDTH; ++j)
@@ -285,6 +306,10 @@ int move_tank(gameState *curr_state, int id, char key_press)
 	}
 	if(ret)
 		apply_key_press_to_tank(curr_state->tanks[id], key_press);
+	// else
+	// {
+	// 	printf("hit wall\n");
+	// }
 	free(new_tank);
 	return ret;
 }
@@ -313,7 +338,7 @@ void fire_bullet(gameState *curr_state, int id)
 {
 	if(curr_state->tanks[id] == NULL)
 		return;
-	bullet *new_bullet = get_new_bullet(0,curr_state->tanks[id]);
+	bullet *new_bullet = get_new_bullet(curr_state->tanks[id]);
 	curr_state->num_bullets++;
 	curr_state->bullets = (bullet **)realloc(curr_state->bullets, curr_state->num_bullets*sizeof(bullet*));
 	curr_state->bullets[curr_state->num_bullets - 1] = new_bullet;
@@ -513,19 +538,39 @@ void print_opening_screen()
 void join_room(int self)
 {
 	char IP[50];
+	char nick[BUFF_SIZE];
 	if(self)
 	{
-		// connect to 127.0.0.1
+		system("stty echo");
 		strcpy(IP, "127.0.0.1");
+		printf("Enter your nick (at most 10 characters long)\n");
+		scanf("%s", nick);
+		while(strlen(nick) > 10)
+		{
+			printf("Invalid nick\n");
+			printf("Enter your nick (at most 10 characters long)\n");
+			scanf("%s", nick);
+		}
+		system("stty -echo");
 	}
 	else
 	{
-		printf("Enter host IP: ");
 		system("stty echo");
+		printf("Enter host IP: ");
 		scanf("%s", IP);
+		printf("Enter your nick (at most 10 characters long)\n");
+		scanf("%s", nick);
+		while(strlen(nick) > 10)
+		{
+			printf("Invalid nick\n");
+			printf("Enter your nick (at most 10 characters long)\n");
+			scanf("%s", nick);
+		}
 		system("stty -echo");
 	}
-	int fd = setup_client_socket(IP);
+	int fd = setup_client_socket(IP, nick);
+	if(fd < 0)
+		return;
 	play_game(fd);
 }
 
@@ -557,6 +602,8 @@ void host_room()
 	int num_clients = 0;
 	
 	int socket_listen_desc = setup_listen_socket();
+	if(socket_listen_desc < 0)
+		return;
 
 	while(1)
 	{
@@ -571,15 +618,17 @@ void host_room()
 				pthread_attr_init(&attr);
 				pthread_t thread;
 				pthread_create(&thread, &attr, join_self_room, NULL);
-				usleep(5000);
 				break;
 			}
 			if(inp == CLOSE_ROOM)
 				return;
 		}
 	}
-
-	listen_on_socket(socket_listen_desc, client_list, &num_clients);
+	int old_client_num = num_clients;
+	while(num_clients == old_client_num)
+	{
+		listen_on_socket(socket_listen_desc, client_list, &num_clients);
+	}
 	fd_set client_fds;
 	FD_ZERO(&client_fds);
 	int i, max_fd = -1;
@@ -625,6 +674,7 @@ void host_room()
 		if(time_elapsed > REFRESH_TIME)
 		{
 			strcpy(buffer, "UPD_PLISS");
+			upd_state(&curr_state);
 			send_to_fdset(client_fds, max_fd, buffer);
 			start_time = clock();
 			memset(received_movement, 0, sizeof(received_movement));
