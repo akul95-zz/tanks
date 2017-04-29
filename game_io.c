@@ -76,9 +76,43 @@ void put_bullet_arena(int id, int row, int col, int arena[][ARENA_WIDTH])
 	arena[row][col] = 200 + id;
 }
 
+void print_indented_coloured(gameState curr_state, int k)
+{
+	int i;
+	switch(k)
+	{
+		case 0: printf(COLOUR_0"%s"RESET_COLOUR, curr_state.nicks[0]);
+				for(i = 0; i < 10 - strlen(curr_state.nicks[0]); i++)
+					printf(" ");
+			break;
+		case 1: printf(COLOUR_1"%s"RESET_COLOUR, curr_state.nicks[1]);
+				for(i = 0; i < 10 - strlen(curr_state.nicks[1]); i++)
+					printf(" ");
+			break;
+		case 2: printf(COLOUR_2"%s"RESET_COLOUR, curr_state.nicks[2]);
+				for(i = 0; i < 10 - strlen(curr_state.nicks[2]); i++)
+					printf(" ");
+			break;
+		case 3: printf(COLOUR_3"%s"RESET_COLOUR, curr_state.nicks[3]);
+				for(i = 0; i < 10 - strlen(curr_state.nicks[3]); i++)
+					printf(" ");
+			break;
+		case 4: printf(COLOUR_4"%s"RESET_COLOUR, curr_state.nicks[4]);
+				for(i = 0; i < 10 - strlen(curr_state.nicks[4]); i++)
+					printf(" ");		
+			break;
+		case 5: printf(COLOUR_5"%s"RESET_COLOUR, curr_state.nicks[5]);
+				for(i = 0; i < 10 - strlen(curr_state.nicks[5]); i++)
+					printf(" ");
+			break;
+	}
+	printf(" ");
+	
+}
+
 void print_arena(gameState curr_state)
 {
-	int i, j;
+	int i, j, k = 0, l = 0;
 	system("clear");
 	for (i = 0; i < curr_state.num_tanks; ++i)
 	{
@@ -147,6 +181,53 @@ void print_arena(gameState curr_state)
 			{
 				printf(".");
 			}
+		}
+		if(i == 0)
+		{
+			printf("Player     Health Score");
+		}
+		else if(k < curr_state.num_tanks && (i%2 == 0))
+		{
+			switch(k)
+			{
+				case 0: print_indented_coloured(curr_state, 0);
+					break;
+				case 1: print_indented_coloured(curr_state, 1);
+					break;
+				case 2: print_indented_coloured(curr_state, 2);
+					break;
+				case 3: print_indented_coloured(curr_state, 3);
+					break;
+				case 4: print_indented_coloured(curr_state, 4);		
+					break;
+				case 5: print_indented_coloured(curr_state, 5);
+					break;
+			}
+			if(curr_state.tanks[k] != NULL)
+				printf("%d\t  ", curr_state.tanks[k]->hp);
+			else
+				printf("0\t  ");
+			printf("%d", curr_state.scores[k]);
+			k++;
+		}
+		else if(k == curr_state.num_tanks && i >= 20 && (i%2 == 0))
+		{
+			switch(l)
+			{
+				case 0: printf("\tControls:");
+					break;
+				case 1: printf("\tW: Up");
+					break;
+				case 2: printf("\tA: Left");
+					break;
+				case 3: printf("\tS: Down");
+					break;
+				case 4: printf("\tD: Right");
+					break;
+				case 5: printf("\tSpace: Fire");
+					break;
+			}
+			l++;
 		}
 		printf("\n");
 	}

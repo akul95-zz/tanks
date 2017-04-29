@@ -165,8 +165,10 @@ int listen_on_fdset(fd_set fdSet, int maxVal, char buffer[])
 	tv.tv_usec = 0;
 	if(select(maxVal + 1, &fdSet, NULL, NULL, &tv) == -1)
 	{
-		return -1;
+		// printf("duh\n");
+		return -100;
 	}
+	// printf("hah\n");
 	int i;
 	strcpy(buffer, "");
 	for (i = 0; i < maxVal + 1; ++i)
@@ -174,10 +176,9 @@ int listen_on_fdset(fd_set fdSet, int maxVal, char buffer[])
 		if(FD_ISSET(i, &fdSet))
 		{
 			int recvSize = recv(i, buffer, BUFF_SIZE, 0);
-			if(recvSize > 0)
-			{
-				return recvSize;
-			}
+			if(recvSize <= 0)
+				return (5 + i);
+			return 1;
 		}
 	}
 	return 0;

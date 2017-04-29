@@ -49,7 +49,8 @@
 #define BULLET_COLOUR "\x1b[37m"
 #define RESET_COLOUR "\x1b[0m"
 
-#define BULLET_DAMAGE 50
+#define BULLET_DAMAGE 20
+#define HIT_BONUS 50
 
 #define PUBLIC_KEY 1000000801
 
@@ -75,6 +76,7 @@ typedef struct gameState
 	int num_tanks;
 	tank **tanks;
 	char **nicks;
+	int *scores;
 	int num_bullets;
 	bullet **bullets;
 	int arena[ARENA_HEIGHT][ARENA_WIDTH];

@@ -1,5 +1,2 @@
-scores on right panel
-controls on right panel
-1 quit = all quit. why???
-if someone disconnects
 safe exit option
+delete poop.c

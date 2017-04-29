@@ -318,6 +318,7 @@ int move_tank(gameState *curr_state, int id, char key_press)
 void load_arena(gameState *curr_state, int level, int num_tanks, tank **tank_info)
 {
 	curr_state->num_tanks = num_tanks;
+	curr_state->scores = (int *)calloc(num_tanks, sizeof(int));
 	curr_state->tanks = tank_info;
 	curr_state->num_bullets = 0;
 	curr_state->bullets = (bullet **)calloc(0, sizeof(bullet*));
@@ -404,8 +405,6 @@ void upd_state(gameState *curr_state)
 			int cdiff = abs(curr_state->tanks[j]->col - c);
 			if(rdiff < 2 && cdiff < 2)
 			{
-				free(curr_state->bullets[i]);
-				curr_state->bullets[i] = NULL;
 				curr_state->tanks[j]->hp = curr_state->tanks[j]->hp - BULLET_DAMAGE;
 				if(curr_state->tanks[j]->hp <= 0)
 				{
@@ -413,6 +412,9 @@ void upd_state(gameState *curr_state)
 					curr_state->tanks[j] = NULL;
 				}
 				bullet_exists = 0;
+				curr_state->scores[curr_state->bullets[i]->id] = curr_state->scores[curr_state->bullets[i]->id] + HIT_BONUS;
+				free(curr_state->bullets[i]);
+				curr_state->bullets[i] = NULL;
 			}
 		}
 	}
@@ -437,6 +439,23 @@ void upd_state(gameState *curr_state)
 	curr_state->num_bullets = ctr;
 }
 
+void print_opening_screen()
+{
+}
+
+void print_closing_screen(gameState *curr_state)
+{
+	system("clear");
+	printf("Final Scoreboard\n");
+	int i;
+	for (i = 0; i < curr_state->num_tanks; ++i)
+	{
+		printf("%s: %d\n", curr_state->nicks[i], curr_state->scores[i]);
+	}
+	usleep(5000000);
+	system("clear");
+}
+
 void play_game(int fd)
 {
 	fd_set serverFD;
@@ -450,9 +469,11 @@ void play_game(int fd)
 	{
 		int ret_val;
 		while((ret_val = listen_on_fdset(serverFD, fd, buffer)) == 0);
-		if(ret_val < 0)
+		if(ret_val != 1)
 		{
-			// error. act accordingly
+			// shut down
+			close(fd);
+			return;
 		}
 		else if(!strcmp(buffer, "ARENA INFO"))
 		{
@@ -464,9 +485,11 @@ void play_game(int fd)
 			// ...
 			// tank_info n
 			while((ret_val = listen_on_fdset(serverFD, fd, buffer)) == 0);
-			if(ret_val < 0)
+			if(ret_val != 1)
 			{
 				// error
+				close(fd);
+				return;
 			}
 			int level, num_tanks;
 			tank **tank_info;
@@ -477,18 +500,22 @@ void play_game(int fd)
 			{
 				curr_state.nicks[i] = (char *)calloc(BUFF_SIZE, sizeof(char));
 				while((ret_val = listen_on_fdset(serverFD, fd, curr_state.nicks[i])) == 0);
-				if(ret_val < 0)
+				if(ret_val != 1)
 				{
 					// error
+					close(fd);
+					return;
 				}
 			}
 			tank_info = (tank **)calloc(num_tanks, sizeof(tank*));
 			for (i = 0; i < num_tanks; ++i)
 			{
 				while((ret_val = listen_on_fdset(serverFD, fd, buffer)) == 0);
-				if(ret_val < 0)
+				if(ret_val != 1)
 				{
 					// error
+					close(fd);
+					return;
 				}
 				tank *temp_tank = (tank *)malloc(sizeof(tank));
 				unpack_tank(temp_tank, buffer);
@@ -513,13 +540,29 @@ void play_game(int fd)
 					return;
 			}
 			int ret_val = listen_on_fdset(serverFD, fd, buffer);
-			if(ret_val < 0)
-			{
-				// error
-			}
-			else if(ret_val == 0)
+			if(ret_val == 0)
 			{
 				// no info
+			}
+			else if(ret_val != 1)
+			{
+				// error
+				close(fd);
+				return;
+			}
+			else if(!strcmp(buffer, "GAME_OVER"))
+			{
+				close(fd);
+				print_closing_screen(&curr_state);
+				return;
+			}
+			else if(!strncmp(buffer, "KICK", 4))
+			{
+				int to_kick;
+				sscanf(buffer + 5, "%d", &to_kick);
+				// printf("kicking %s\n", curr_state.nicks[to_kick]);
+				free(curr_state.tanks[to_kick]);
+				curr_state.tanks[to_kick] = NULL;
 			}
 			else if(!strcmp(buffer, "UPD_PLISS"))
 			{
@@ -544,10 +587,6 @@ void play_game(int fd)
 			}
 		}
 	}
-}
-
-void print_opening_screen()
-{
 }
 
 void join_room(int self)
@@ -620,6 +659,10 @@ void host_room()
 	if(socket_listen_desc < 0)
 		return;
 
+	pthread_attr_t attr;
+	pthread_attr_init(&attr);
+	pthread_t thread;
+				
 	while(1)
 	{
 		listen_on_socket(socket_listen_desc, client_list, &num_clients);
@@ -629,9 +672,6 @@ void host_room()
 			char inp = *inp_ptr;
 			if(inp == START_GAME)
 			{
-				pthread_attr_t attr;
-				pthread_attr_init(&attr);
-				pthread_t thread;
 				pthread_create(&thread, &attr, join_self_room, NULL);
 				break;
 			}
@@ -701,21 +741,36 @@ void host_room()
 		{
 			strcpy(buffer, "UPD_PLISS");
 			upd_state(&curr_state);
-			send_to_fdset(client_fds, max_fd, buffer);
+			for (i = 0; i < num_clients; ++i)
+			{
+				if(!FD_ISSET(client_list[i].fd, &client_fds))
+					continue;
+				int ret_val = send(client_list[i].fd, buffer, BUFF_SIZE, 0);
+				if(ret_val == -1)
+				{
+					char tbuff[BUFF_SIZE];
+					sprintf(tbuff, "KICK %d", client_list[i].id);
+					free(curr_state.tanks[client_list[i].id]);
+					curr_state.tanks[client_list[i].id] = NULL;
+					send_to_fdset(client_fds, max_fd, tbuff);
+					close(client_list[i].fd);
+					FD_CLR(client_list[i].fd, &client_fds);
+				}
+			}
 			start_time = clock();
 			memset(received_movement, 0, sizeof(received_movement));
 			memset(received_fire, 0, sizeof(received_fire));
 		}
 		int ret_val = listen_on_fdset(client_fds, max_fd, buffer);
-		if(ret_val < 0)
+		if(ret_val == -100)
 		{
-			// error
+			// self error
 		}
 		else if(ret_val == 0)
 		{
 			// do nothing
 		}
-		else
+		else if(ret_val == 1)
 		{
 			int from_id;
 			int sscanf_len = 0;
@@ -733,34 +788,66 @@ void host_room()
 				send_to_fdset(client_fds, max_fd, buffer);
 			}
 		}
+		else
+		{
+			// extract fd
+			int disconn_fd = ret_val - 5;
+			int disconn_id = -1;
+			for (i = 0; i < num_clients; ++i)
+			{
+				if(client_list[i].fd == disconn_fd)
+				{
+					disconn_id = client_list[i].id;
+				}
+			}
+			if(disconn_id != -1)
+			{
+				sprintf(buffer, "KICK %d", disconn_id);
+				free(curr_state.tanks[disconn_id]);
+				curr_state.tanks[disconn_id] = NULL;
+				send_to_fdset(client_fds, max_fd, buffer);
+				close(disconn_fd);
+				FD_CLR(disconn_fd, &client_fds);
+			}
+		}
+		// check if game has ended
+		int alive_ctr = 0;
+		for (i = 0; i < num_clients; ++i)
+		{
+			if(curr_state.tanks[i] != NULL)
+				alive_ctr++;
+		}
+		if(alive_ctr <= 1)
+		{
+			sprintf(buffer, "GAME_OVER");
+			send_to_fdset(client_fds, max_fd, buffer);
+			break;
+		}
 	}
+	pthread_join(thread, NULL);
 }
 
 void run_game()
 {
 	system("stty -echo");
 	print_opening_screen();
-	while(1)
-	{
-		char opt1 = HOST_ROOM;
-		char opt2 = JOIN_ROOM;
-		char opt3 = EXIT_GAME;
-		printf("Press %c to host room\n", opt1);
-		printf("Press %c to join room\n", opt2);
-		printf("Press %c to exit game\n", opt3);
-		char inp;
-		system("stty echo");
-		scanf(" %c", &inp);
-		system("stty -echo");
-		if(inp == HOST_ROOM)
-			host_room();
-		if(inp == JOIN_ROOM)
-			join_room(0);
-		if(inp == EXIT_GAME)
-			break;
-		if(inp == ESCAPE)
-			break;
-		system("stty echo");
-	}
+	char opt1 = HOST_ROOM;
+	char opt2 = JOIN_ROOM;
+	char opt3 = EXIT_GAME;
+	printf("Press %c to host room\n", opt1);
+	printf("Press %c to join room\n", opt2);
+	printf("Press %c to exit game\n", opt3);
+	char inp;
+	system("stty echo");
+	scanf(" %c", &inp);
+	system("stty -echo");
+	if(inp == HOST_ROOM)
+		host_room();
+	if(inp == JOIN_ROOM)
+		join_room(0);
+	if(inp == EXIT_GAME)
+		return;
+	if(inp == ESCAPE)
+		return;
 	system("stty echo");
 }
