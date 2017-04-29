@@ -667,6 +667,11 @@ void host_room()
 	{
 		listen_on_socket(socket_listen_desc, client_list, &num_clients);
 		char *inp_ptr = get_input();
+		if(num_clients == 5)
+		{
+			inp_ptr = (char *)malloc(sizeof(char));
+			*inp_ptr = START_GAME;
+		}
 		if(inp_ptr != NULL)
 		{
 			char inp = *inp_ptr;
